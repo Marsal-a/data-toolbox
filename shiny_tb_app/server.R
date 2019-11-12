@@ -196,6 +196,7 @@ server=function(session,input,output){
     links[nodes,int_target:=i.pos]
     nodes=nodes[order(pos)]
     nodes[,names:=gsub("c[0-9]_","",names)]
+    nodes[,names:=gsub("[^[:alnum:] _-]","",names)]
     
     sk=sankeyNetwork(Links=links,Nodes=nodes,
                      Source = "int_source",Target = "int_target",Value="N",
@@ -236,5 +237,7 @@ server=function(session,input,output){
     sankeyNetworkOutput("HE_sankey_plot",height = paste0("",max(HE_sankey_height()*15,500),"px",""))
     # sankeyNetworkOutput("HE_sankey_plot",height = "500px")
   )
+  
+  
   
 }
