@@ -248,7 +248,7 @@ server=function(session,input,output){
     # browser()
     if(is.null(input$ftosql_file_input)) return(NULL)
     infile=input$ftosql_file_input
-    dt=fread(infile$datapath,check.names = T)
+    dt=fread(infile$datapath,check.names = T,encoding = "Latin-1")
     return(dt)
   })
   # ftosql_input_schema=reactive({})
@@ -305,7 +305,19 @@ server=function(session,input,output){
     if(!is.null(input$ftosql_file_input)){
       # browser()
       # f=create_sql_table("lab","table",ftosql_input_data(),NULL)
-      HTML(paste(create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),collapse = '<br/>'))
+      # HTML(paste(create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),collapse = '<br/>'))
+      query=create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL)
+      if (length(query)>50){
+        res=c(query[1:49],"...",tail(query,1))  
+      }else{
+        res=query
+      }
+      
+      HTML(
+        paste(
+          res,
+          collapse = '<br/>')
+        )
     }
   })
   
