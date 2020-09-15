@@ -282,10 +282,10 @@ server=function(session,input,output){
     )
     
     walk(names(R_table),function(x){
-      print(x)
+      # print(x)
       if(class(R_table[,get(x)])[[1]]=="character"){
         # sapply(R_table,function(x) class(x)=="character"),with=F])
-        R_table[,(x):=paste0("'",gsub("'","",get(x)),"'")]
+        R_table[,(x):=paste0("'",gsub("'"," ",get(x)),"'")]
       }
       if(class(R_table[,get(x)])[[1]]%in%c("integer","numeric")){
         # sapply(R_table,function(x) class(x)=="character"),with=F])
