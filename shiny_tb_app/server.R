@@ -248,7 +248,7 @@ server=function(session,input,output){
     # browser()
     if(is.null(input$ftosql_file_input)) return(NULL)
     infile=input$ftosql_file_input
-    dt=fread(infile$datapath,check.names = T)
+    dt=fread(infile$datapath,check.names = T,encoding = "Latin-1")
     return(dt)
   })
   # ftosql_input_schema=reactive({})
@@ -261,10 +261,13 @@ server=function(session,input,output){
     names(R_table) <- gsub("\\.", "_", names(R_table))
     
     # browser()
-    class=data.table(name=names(R_table),type=unlist(lapply(R_table,class)),max_char=map(R_table,~max(nchar(.,keepNA = F))))
+    class=data.table(name=names(R_table),type=unlist(map(R_table,~base::class(.)[[1]]),use.names = T),max_char=map(R_table,~max(nchar(.,keepNA = F))))
     class[,dec:=paste0(name,fcase(type=="character",paste0(" nvarchar(",max_char,")"),
                                   type=="integer"," integer",
-                                  type=="numeric"," decimal(18,5)"))]
+                                  type=="numeric"," decimal(18,5)",
+                                  type=="POSIXct"," date",
+                                  type=="POSIXtt"," date",
+                                  type=="POSIXlt"," date"))]
     
     drop_table=paste0(
       "IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '",az_table,"' AND TABLE_SCHEMA = '",az_scheme,"')
@@ -279,14 +282,19 @@ server=function(session,input,output){
     )
     
     walk(names(R_table),function(x){
-      if(class(R_table[,get(x)])=="character"){
+      print(x)
+      if(class(R_table[,get(x)])[[1]]=="character"){
         # sapply(R_table,function(x) class(x)=="character"),with=F])
-        R_table[,(x):=paste0("'",get(x),"'")]
+        R_table[,(x):=paste0("'",gsub("'","",get(x)),"'")]
       }
-      if(class(R_table[,get(x)])=="integer"){
+      if(class(R_table[,get(x)])[[1]]%in%c("integer","numeric")){
         # sapply(R_table,function(x) class(x)=="character"),with=F])
         R_table[is.na(get(x)),(x):=0]
       }
+      if(class(R_table[,get(x)])[[1]]%in%c("POSIXct","POSIXt","POSIXlt")){
+        R_table[,(x):=paste0("'",format(get(x),"%Y/%m/%d"),"'")]
+      }
+      
     })
     R_table[, key_ := do.call(paste, c(.SD, sep = ",")), .SDcols = names(R_table)]
     
@@ -305,7 +313,19 @@ server=function(session,input,output){
     if(!is.null(input$ftosql_file_input)){
       # browser()
       # f=create_sql_table("lab","table",ftosql_input_data(),NULL)
-      HTML(paste(create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),collapse = '<br/>'))
+      # HTML(paste(create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),collapse = '<br/>'))
+      query=create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL)
+      if (length(query)>50){
+        res=c(query[1:49],"...",tail(query,1))  
+      }else{
+        res=query
+      }
+      
+      HTML(
+        paste(
+          res,
+          collapse = '<br/>')
+        )
     }
   })
   
