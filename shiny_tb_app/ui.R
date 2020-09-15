@@ -59,7 +59,8 @@ shinyUI(fluidPage(
                textInput("ftosql_file_schema","schéma cible :",value = "LAB"),
                textInput("ftosql_file_table","table cible : ",value = "mytable"),
                # rclipButton("id","copy to clipboard","ftosql_output"),
-               actionButton("do", "Copy query",icon = icon("clipboard")),
+               # actionButton("do", "Copy query",icon = icon("clipboard")),
+               downloadButton("ftosql_download", "Download"),
                width = 2),
              mainPanel(
                uiOutput('ftosql_output')

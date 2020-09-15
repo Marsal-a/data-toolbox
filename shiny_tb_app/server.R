@@ -309,13 +309,23 @@ server=function(session,input,output){
     }
   })
   
-  observeEvent(input$do, {
-    if(!is.null(input$ftosql_file_input)){
-      write.table(
-        create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),
-        row.names = F,quote=F,col.names = F,"clipboard-100000")
+  output$ftosql_download <- downloadHandler(
+    filename = function() {
+      paste0(input$ftosql_file_schema,".",input$ftosql_file_table,".sql")
+    },
+    content = function(file) {
+      res=create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL)
+      write(res,file)
     }
-  })
+  )
+  
+  # observeEvent(input$do, {
+  #   if(!is.null(input$ftosql_file_input)){
+  #     write.table(
+  #       create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),
+  #       row.names = F,quote=F,col.names = F,"clipboard-100000")
+  #   }
+  # })
   
   
 }
