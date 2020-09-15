@@ -260,9 +260,10 @@ server=function(session,input,output){
     
     names(R_table) <- gsub("\\.", "_", names(R_table))
     
-    # browser()
+    browser()
     class=data.table(name=names(R_table),type=unlist(map(R_table,~base::class(.)[[1]]),use.names = T),max_char=map(R_table,~max(nchar(.,keepNA = F))))
     class[,dec:=paste0(name,fcase(type=="character",paste0(" nvarchar(",max_char,")"),
+                                  type=="logical",paste0(" nvarchar(",max_char,")"),
                                   type=="integer"," integer",
                                   type=="numeric"," decimal(18,5)",
                                   type=="POSIXct"," date",
@@ -283,7 +284,7 @@ server=function(session,input,output){
     
     walk(names(R_table),function(x){
       # print(x)
-      if(class(R_table[,get(x)])[[1]]=="character"){
+      if(class(R_table[,get(x)])[[1]]%in%c("character","logical")){
         # sapply(R_table,function(x) class(x)=="character"),with=F])
         R_table[,(x):=paste0("'",gsub("'"," ",get(x)),"'")]
       }
