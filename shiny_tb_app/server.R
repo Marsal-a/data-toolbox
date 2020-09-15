@@ -104,12 +104,13 @@ server=function(session,input,output){
   }
   
   MR_dt_out_reac=eventReactive(input$MR_run_matching,{
-    
+    browser()
     dt_out=MR_match_ref_model(MR_input_data(),MR_input_ref(),input$MR_col_matched,input$MR_col_to_match,NULL,input$MR_method)
     showModal(modalDialog(title = "","matching ok",easyClose = TRUE,footer = tagList(modalButton("Ok"))))
     return(dt_out)
     
   })
+  
   output$MR_res=renderDataTable({
     cols=c(eval(input$MR_col_to_match),"ref_model")
     dt=unique(MR_dt_out_reac()[,..cols])
@@ -127,6 +128,10 @@ server=function(session,input,output){
       fwrite(MR_dt_out_reac(), file, row.names = FALSE)
     }
   )
+  
+  
+  
+  
   
   HE_input_data=reactive({
     # browser()
@@ -238,6 +243,79 @@ server=function(session,input,output){
     # sankeyNetworkOutput("HE_sankey_plot",height = "500px")
   )
   
+  
+  ftosql_input_data=reactive({
+    # browser()
+    if(is.null(input$ftosql_file_input)) return(NULL)
+    infile=input$ftosql_file_input
+    dt=fread(infile$datapath,check.names = T)
+    return(dt)
+  })
+  # ftosql_input_schema=reactive({})
+  create_sql_table=function(az_scheme,az_table,R_table,col_to_delete){
+    
+    walk(col_to_delete,function(x){
+      R_table[,(x):=NULL]
+    })
+    
+    names(R_table) <- gsub("\\.", "_", names(R_table))
+    
+    # browser()
+    class=data.table(name=names(R_table),type=unlist(lapply(R_table,class)),max_char=map(R_table,~max(nchar(.,keepNA = F))))
+    class[,dec:=paste0(name,fcase(type=="character",paste0(" nvarchar(",max_char,")"),
+                                  type=="integer"," integer",
+                                  type=="numeric"," decimal(18,5)"))]
+    
+    drop_table=paste0(
+      "IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '",az_table,"' AND TABLE_SCHEMA = '",az_scheme,"')
+    DROP TABLE ",az_scheme,".",az_table
+    )
+    
+    
+    create_table_start=paste0(
+      paste0("CREATE TABLE ",az_scheme,".",az_table,"\n(\n"),  ##START
+      paste0(class$dec,collapse = ",\n"),
+      paste0("\n)")
+    )
+    
+    walk(names(R_table),function(x){
+      if(class(R_table[,get(x)])=="character"){
+        # sapply(R_table,function(x) class(x)=="character"),with=F])
+        R_table[,(x):=paste0("'",get(x),"'")]
+      }
+      if(class(R_table[,get(x)])=="integer"){
+        # sapply(R_table,function(x) class(x)=="character"),with=F])
+        R_table[is.na(get(x)),(x):=0]
+      }
+    })
+    R_table[, key_ := do.call(paste, c(.SD, sep = ",")), .SDcols = names(R_table)]
+    
+    
+    inserts=R_table[,paste0("SELECT ",key_," UNION ALL")]
+    inserts=replace(inserts,length(inserts),gsub("UNION ALL","",tail(inserts,1)))
+    res=c(drop_table,"\n",create_table_start,"\n",paste0("INSERT INTO ",az_scheme,".",az_table),"\n",inserts)
+    return(res)
+    
+    
+    
+  }
+  
+  
+  output$ftosql_output <- renderUI({
+    if(!is.null(input$ftosql_file_input)){
+      # browser()
+      # f=create_sql_table("lab","table",ftosql_input_data(),NULL)
+      HTML(paste(create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),collapse = '<br/>'))
+    }
+  })
+  
+  observeEvent(input$do, {
+    if(!is.null(input$ftosql_file_input)){
+      write.table(
+        create_sql_table(input$ftosql_file_schema,input$ftosql_file_table,ftosql_input_data(),NULL),
+        row.names = F,quote=F,col.names = F,"clipboard-100000")
+    }
+  })
   
   
 }
